@@ -1,9 +1,41 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-// Merchant Types
-export type MerchantType = 'restaurant' | 'hotel' | 'retail' | 'spa' | 'gym' | 'salon' | 'taxi' | 'flight' | 'other';
+// ====== ALL MERCHANT TYPES ======
+export type MerchantType =
+  // Food & Beverage
+  | 'restaurant' | 'cafe' | 'cloud_kitchen' | 'bakery' | 'bar' | 'food_court' | 'food_delivery'
+  // Hospitality
+  | 'hotel' | 'hostel' | 'homestay' | 'resort' | 'guesthouse'
+  // Retail
+  | 'retail' | 'grocery' | 'pharmacy' | 'electronics' | 'fashion' | 'furniture' | 'pet_store'
+  // Beauty & Wellness
+  | 'salon' | 'spa' | 'gym' | 'clinic'
+  // Services
+  | 'service' | 'laundry' | 'repair' | 'cleaning'
+  // Transport & Travel
+  | 'taxi' | 'transport' | 'parking'
+  // Entertainment & Events
+  | 'events' | 'tickets' | 'cinema' | 'gaming'
+  // Education
+  | 'tuition' | 'coaching' | 'courses'
+  // Other
+  | 'general';
 
-// Menu Item Interface
+// ====== MERCHANT TYPE GROUPS ======
+export const MERCHANT_TYPE_GROUPS = {
+  'Food & Beverage': ['restaurant', 'cafe', 'cloud_kitchen', 'bakery', 'bar', 'food_court', 'food_delivery'],
+  'Hospitality': ['hotel', 'hostel', 'homestay', 'resort', 'guesthouse'],
+  'Retail': ['retail', 'grocery', 'pharmacy', 'electronics', 'fashion', 'furniture', 'pet_store'],
+  'Beauty & Wellness': ['salon', 'spa', 'gym', 'clinic'],
+  'Services': ['service', 'laundry', 'repair', 'cleaning'],
+  'Transport & Travel': ['taxi', 'transport', 'parking'],
+  'Entertainment': ['events', 'tickets', 'cinema', 'gaming'],
+  'Education': ['tuition', 'coaching', 'courses'],
+  'Other': ['general']
+};
+
+// ====== INTERFACES ======
+
 export interface IMenuItem {
   id: string;
   name: string;
@@ -16,10 +48,9 @@ export interface IMenuItem {
   dietary?: string[];
   allergens?: string[];
   modifiers?: { name: string; price: number }[];
-  complementary?: boolean; // Free item?
+  complementary?: boolean;
 }
 
-// FAQ Interface
 export interface IFAQ {
   id: string;
   question: string;
@@ -31,7 +62,6 @@ export interface IFAQ {
   updatedAt: Date;
 }
 
-// Training Doc Interface
 export interface ITrainingDoc {
   id: string;
   title: string;
@@ -41,7 +71,6 @@ export interface ITrainingDoc {
   createdAt: Date;
 }
 
-// Business Info Interface
 export interface IBusinessInfo {
   name: string;
   type: MerchantType;
@@ -59,7 +88,7 @@ export interface IBusinessInfo {
 // ====== SALES STRATEGIES ======
 export interface IComplimentaryOffer {
   item: string;
-  condition?: string; // "after 7pm", "for orders over 500", "VIP only"
+  condition?: string;
   description: string;
   isActive: boolean;
 }
@@ -69,8 +98,8 @@ export interface IDiscount {
   type: 'percentage' | 'fixed' | 'bogo' | 'free_item';
   value: number;
   minOrder?: number;
-  applicableTo?: string[]; // categories or item names
-  validDays?: string[]; // ["monday", "tuesday"]
+  applicableTo?: string[];
+  validDays?: string[];
   validHours?: { start: string; end: string };
   code?: string;
   description: string;
@@ -80,7 +109,7 @@ export interface IDiscount {
 export interface IPromotion {
   id: string;
   name: string;
-  type: 'happy_hour' | 'seasonal' | 'loyalty' | 'first_order' | 'referral';
+  type: 'happy_hour' | 'seasonal' | 'loyalty' | 'first_order' | 'referral' | 'flash_sale';
   description: string;
   startDate?: Date;
   endDate?: Date;
@@ -90,228 +119,334 @@ export interface IPromotion {
   isActive: boolean;
 }
 
-// ====== POLICIES BY MERCHANT TYPE ======
+// ====== POLICIES INTERFACES ======
 
-// Common to all
 export interface IBasePolicy {
   acceptsReturns?: boolean;
   returnWindowDays?: number;
   returnConditions?: string;
   refundPolicy?: string;
   cancellationPolicy?: string;
+  paymentMethods?: string[];
 }
 
-// Restaurant specific
+// RESTAURANT
 export interface IRestaurantPolicy extends IBasePolicy {
-  // Ordering
   minOrderValue?: number;
   deliveryFee?: number;
   freeDeliveryAbove?: number;
   deliveryAreas?: string[];
   deliveryTime?: string;
-
-  // Dining
   reservationRequired?: boolean;
   reservationAdvanceHours?: number;
   partySizeLimit?: number;
-
-  // Complimentary
+  tableBookingFee?: number;
   complimentaryDrink?: IComplimentaryOffer;
   complimentaryAppetizer?: IComplimentaryOffer;
   complimentaryDessert?: IComplimentaryOffer;
   birthdayOffer?: IComplimentaryOffer;
-
-  // Ordering rules
   takeoutAvailable?: boolean;
   dineInOnly?: boolean;
   cateringAvailable?: boolean;
   privateDiningAvailable?: boolean;
-
-  // Payment
-  paymentMethods?: string[];
-  tipPolicy?: string;
+  buffetAvailable?: boolean;
+  buffetPrice?: number;
+  alcoholServed?: boolean;
+  dogFriendly?: boolean;
+  outdoorSeating?: boolean;
 }
 
-// Hotel specific
+// CAFE
+export interface ICafePolicy extends IBasePolicy {
+  minOrderValue?: number;
+  deliveryFee?: number;
+  freeDeliveryAbove?: number;
+  coworkingSpace?: boolean;
+  meetingRoomAvailable?: boolean;
+  meetingRoomFee?: number;
+  complimentaryWiFi?: boolean;
+  powerOutlets?: boolean;
+}
+
+// HOTEL
 export interface IHotelPolicy extends IBasePolicy {
-  // Check-in/out
   checkInTime?: string;
   checkOutTime?: string;
   lateCheckoutAvailable?: boolean;
   lateCheckoutFee?: number;
   earlyCheckInAvailable?: boolean;
   earlyCheckInFee?: number;
-
-  // Rooms
   maxOccupancy?: number;
   extraBedAvailable?: boolean;
   extraBedFee?: number;
-
-  // Amenities
   complimentaryBreakfast?: boolean;
   complimentaryWiFi?: boolean;
   complimentaryParking?: boolean;
   complimentaryGym?: boolean;
   complimentaryPool?: boolean;
-
-  // Services
+  complimentarySpa?: boolean;
   roomServiceAvailable?: boolean;
   laundryAvailable?: boolean;
   airportTransfer?: boolean;
   concierge24h?: boolean;
-
-  // Deposits
+  miniBar?: boolean;
+  safeDeposit?: boolean;
   securityDeposit?: number;
   idRequired?: boolean;
 }
 
-// Retail specific
+// HOSTEL/HOMESTAY
+export interface IHostelPolicy extends IBasePolicy {
+  checkInTime?: string;
+  checkOutTime?: string;
+  curfewTime?: string;
+  commonKitchen?: boolean;
+  laundryAvailable?: boolean;
+  lockerProvided?: boolean;
+  lockerFee?: number;
+  complimentaryWiFi?: boolean;
+  complimentaryBreakfast?: boolean;
+}
+
+// RESORT
+export interface IResortPolicy extends IHotelPolicy {
+  allInclusiveAvailable?: boolean;
+  allInclusivePrice?: number;
+  beachAccess?: boolean;
+  kidsClub?: boolean;
+  kidsClubAge?: number;
+  waterSports?: boolean;
+  spaIncluded?: boolean;
+  golfCourse?: boolean;
+}
+
+// RETAIL
 export interface IRetailPolicy extends IBasePolicy {
-  // Returns (already in base but enhanced)
   storeCreditOnly?: boolean;
   originalPackagingRequired?: boolean;
-
-  // Shopping
   exchangeAvailable?: boolean;
   sizeExchangeDays?: number;
-
-  // Loyalty
   loyaltyPointsEnabled?: boolean;
   pointsPerRupee?: number;
-
-  // Services
   giftWrappingAvailable?: boolean;
   giftWrappingFee?: number;
   alterationService?: boolean;
+  homeDelivery?: boolean;
+  deliveryFee?: number;
+  freeDeliveryAbove?: number;
 }
 
-// Spa/Salon specific
-export interface ISpaPolicy extends IBasePolicy {
-  // Appointments
+// GROCERY
+export interface IGroceryPolicy extends IBasePolicy {
+  minOrderValue?: number;
+  deliveryFee?: number;
+  freeDeliveryAbove?: number;
+  deliveryTimeSlot?: string;
+  deliveryAreas?: string[];
+  freshnessGuarantee?: boolean;
+  sameDayDelivery?: boolean;
+  scheduledDelivery?: boolean;
+}
+
+// PHARMACY
+export interface IPharmacyPolicy extends IBasePolicy {
+  prescriptionRequired?: boolean;
+  homeDelivery?: boolean;
+  deliveryFee?: number;
+  deliveryTime?: string;
+  consultationAvailable?: boolean;
+  consultationFee?: number;
+  compoundingAvailable?: boolean;
+  medicineExchange?: boolean;
+}
+
+// ELECTRONICS
+export interface IElectronicsPolicy extends IBasePolicy {
+  warrantyProvided?: boolean;
+  warrantyPeriodMonths?: number;
+  installationAvailable?: boolean;
+  installationFee?: number;
+  homeDelivery?: boolean;
+  deliveryFee?: number;
+  extendedWarranty?: boolean;
+}
+
+// FASHION
+export interface IFashionPolicy extends IBasePolicy {
+  tailoringAvailable?: boolean;
+  tailoringFee?: number;
+  sizeExchangeDays?: number;
+  loyaltyPointsEnabled?: boolean;
+  pointsPerRupee?: number;
+  giftWrappingAvailable?: boolean;
+  homeDelivery?: boolean;
+  deliveryFee?: number;
+}
+
+// SALON
+export interface ISalonPolicy extends IBasePolicy {
   advanceBookingRequired?: boolean;
   advanceBookingHours?: number;
   cancellationWindowHours?: number;
-
-  // Services
   packagesAvailable?: boolean;
   membershipAvailable?: boolean;
+  consultationFree?: boolean;
+  consultationFee?: number;
+  homeServiceAvailable?: boolean;
+  homeServiceFee?: number;
+}
 
-  // Facilities
+// SPA
+export interface ISpaPolicy extends IBasePolicy {
+  advanceBookingRequired?: boolean;
+  advanceBookingHours?: number;
+  cancellationWindowHours?: number;
+  packagesAvailable?: boolean;
+  membershipAvailable?: boolean;
   saunaAvailable?: boolean;
   steamRoomAvailable?: boolean;
   jacuzziAvailable?: boolean;
-
-  // Health
   healthFormRequired?: boolean;
   ageRestriction?: number;
+  couplePackages?: boolean;
 }
 
-// Gym specific
+// GYM
 export interface IGymPolicy extends IBasePolicy {
-  // Membership
   joiningFee?: number;
   monthlyFee?: number;
   yearlyFee?: number;
-
-  // Access
+  quarterlyFee?: number;
   hours24h?: boolean;
-  accessTo?: string[]; // ["pool", "sauna", "classes"]
-
-  // Personal Training
+  accessTo?: string[];
   personalTrainingAvailable?: boolean;
   personalTrainingFee?: number;
-
-  // Guest
   guestPassesIncluded?: number;
   additionalGuestFee?: number;
-
-  // Lockers
   lockerRental?: boolean;
   lockerFee?: number;
+  yogaClasses?: boolean;
+  zumba?: boolean;
+  crossfit?: boolean;
 }
 
-// Taxi/Ride specific
+// CLINIC
+export interface IClinicPolicy extends IBasePolicy {
+  appointmentRequired?: boolean;
+  emergencyService?: boolean;
+  homeVisitAvailable?: boolean;
+  homeVisitFee?: number;
+  insuranceAccepted?: boolean;
+  insuranceProviders?: string[];
+  consultationFee?: number;
+  reportDelivery?: boolean;
+}
+
+// LAUNDRY
+export interface ILaundryPolicy extends IBasePolicy {
+  selfService?: boolean;
+  dropOffService?: boolean;
+  pickupDelivery?: boolean;
+  pickupDeliveryFee?: number;
+  expressService?: boolean;
+  expressServiceFee?: number;
+  ironingIncluded?: boolean;
+  dryCleaningAvailable?: boolean;
+}
+
+// TAXI/TRANSPORT
 export interface ITaxiPolicy extends IBasePolicy {
-  // Pricing
   baseFare?: number;
   perKmRate?: number;
   perMinuteRate?: number;
   minimumFare?: number;
-
-  // Services
   airportTransfer?: boolean;
   outstationAvailable?: boolean;
   corporateAccounts?: boolean;
-
-  // Vehicle
   vehicleTypes?: string[];
-
-  // Payment
   cashEnabled?: boolean;
   onlinePaymentEnabled?: boolean;
   corporateBilling?: boolean;
+  driverDetailsShared?: boolean;
 }
 
-// Unified Policy Interface
+// PARKING
+export interface IParkingPolicy extends IBasePolicy {
+  hourlyRate?: number;
+  dailyMaxRate?: number;
+  monthlyPass?: boolean;
+  monthlyPassFee?: number;
+  evCharging?: boolean;
+  evChargingRate?: number;
+  valetParking?: boolean;
+  valetParkingFee?: number;
+  coveredParking?: boolean;
+}
+
+// EVENTS/TICKETS
+export interface IEventsPolicy extends IBasePolicy {
+  refundPolicy?: string;
+  transferAllowed?: boolean;
+  transferFee?: number;
+  ageRestriction?: number;
+  seatSelection?: boolean;
+  bookingFee?: number;
+  instantConfirmation?: boolean;
+}
+
+// COURSES/TUITION
+export interface ICoursesPolicy extends IBasePolicy {
+  demoClassAvailable?: boolean;
+  demoClassCount?: number;
+  refundPolicy?: string;
+  installmentAvailable?: boolean;
+  studyMaterialProvided?: boolean;
+  certificateProvided?: boolean;
+  certificateFee?: number;
+  placementAssistance?: boolean;
+}
+
+// UNIFIED POLICY
 export interface IPolicy {
-  // Base policies (all merchants)
   cancellation?: string;
   delivery?: { minOrder: number; fee: number; areas: string[] };
-  paymentMethods?: string[];
   reservationRules?: string;
-
-  // Merchant-specific policies
   restaurant?: IRestaurantPolicy;
+  cafe?: ICafePolicy;
   hotel?: IHotelPolicy;
+  hostel?: IHostelPolicy;
+  resort?: IResortPolicy;
   retail?: IRetailPolicy;
+  grocery?: IGroceryPolicy;
+  pharmacy?: IPharmacyPolicy;
+  electronics?: IElectronicsPolicy;
+  fashion?: IFashionPolicy;
+  salon?: ISalonPolicy;
   spa?: ISpaPolicy;
   gym?: IGymPolicy;
+  clinic?: IClinicPolicy;
+  laundry?: ILaundryPolicy;
   taxi?: ITaxiPolicy;
-
-  // Generic custom policies
+  transport?: ITaxiPolicy;
+  parking?: IParkingPolicy;
+  events?: IEventsPolicy;
+  tickets?: IEventsPolicy;
+  courses?: ICoursesPolicy;
+  tuition?: ICoursesPolicy;
   customPolicies?: { key: string; value: string; description: string }[];
 }
 
-// ====== CAMPAIGNS & OFFERS ======
-export interface ICampaign {
-  id: string;
-  name: string;
-  type: 'discount' | 'combo' | 'bundle' | 'loyalty' | 'seasonal';
-  description: string;
-  merchantType?: MerchantType[]; // Applicable merchant types
-  conditions?: string; // When applicable
-  benefits: {
-    discountPercent?: number;
-    discountAmount?: number;
-    freeItem?: string;
-    cashback?: number;
-    points?: number;
-  };
-  startDate: Date;
-  endDate: Date;
-  isActive: boolean;
-  createdBy: string;
-}
-
-// Merchant Knowledge Schema
+// ====== MAIN INTERFACE ======
 export interface IMerchantKnowledge extends Document {
   merchantId: string;
   businessInfo: IBusinessInfo;
-  menuData: {
-    categories: string[];
-    items: IMenuItem[];
-    lastUpdated: Date;
-  };
+  menuData: { categories: string[]; items: IMenuItem[]; lastUpdated: Date };
   policies: IPolicy;
   faqs: IFAQ[];
   trainingDocs: ITrainingDoc[];
-
-  // Sales strategies
   complimentaryOffers?: IComplimentaryOffer[];
   discounts?: IDiscount[];
   activePromotions?: IPromotion[];
-
-  // AI Settings
   settings: {
     aiEnabled: boolean;
     autoResponse: boolean;
@@ -319,7 +454,6 @@ export interface IMerchantKnowledge extends Document {
     salesStrategyEnabled?: boolean;
     allowDynamicPricing?: boolean;
   };
-
   createdAt: Date;
   updatedAt: Date;
 }
@@ -340,10 +474,7 @@ const DiscountSchema = new Schema({
   minOrder: { type: Number },
   applicableTo: [{ type: String }],
   validDays: [{ type: String }],
-  validHours: {
-    start: { type: String },
-    end: { type: String }
-  },
+  validHours: { start: { type: String }, end: { type: String } },
   code: { type: String },
   description: { type: String, required: true },
   isActive: { type: Boolean, default: true }
@@ -352,7 +483,7 @@ const DiscountSchema = new Schema({
 const PromotionSchema = new Schema({
   id: { type: String, required: true },
   name: { type: String, required: true },
-  type: { type: String, enum: ['happy_hour', 'seasonal', 'loyalty', 'first_order', 'referral'], required: true },
+  type: { type: String, enum: ['happy_hour', 'seasonal', 'loyalty', 'first_order', 'referral', 'flash_sale'], required: true },
   description: { type: String, required: true },
   startDate: { type: Date },
   endDate: { type: Date },
@@ -373,10 +504,7 @@ const MenuItemSchema = new Schema({
   preparationTime: { type: Number },
   dietary: [{ type: String }],
   allergens: [{ type: String }],
-  modifiers: [{
-    name: { type: String },
-    price: { type: Number }
-  }],
+  modifiers: [{ name: { type: String }, price: { type: Number } }],
   complementary: { type: Boolean, default: false }
 }, { _id: false });
 
@@ -404,7 +532,17 @@ const BusinessInfoSchema = new Schema({
   name: { type: String, required: true },
   type: {
     type: String,
-    enum: ['restaurant', 'hotel', 'retail', 'spa', 'gym', 'salon', 'taxi', 'flight', 'other'],
+    enum: [
+      'restaurant', 'cafe', 'cloud_kitchen', 'bakery', 'bar', 'food_court', 'food_delivery',
+      'hotel', 'hostel', 'homestay', 'resort', 'guesthouse',
+      'retail', 'grocery', 'pharmacy', 'electronics', 'fashion', 'furniture', 'pet_store',
+      'salon', 'spa', 'gym', 'clinic',
+      'service', 'laundry', 'repair', 'cleaning',
+      'taxi', 'transport', 'parking',
+      'events', 'tickets', 'cinema', 'gaming',
+      'tuition', 'coaching', 'courses',
+      'general'
+    ],
     required: true
   },
   address: { type: String, required: true },
@@ -414,139 +552,11 @@ const BusinessInfoSchema = new Schema({
   phone: { type: String, required: true },
   email: { type: String },
   website: { type: String },
-  hours: {
-    type: Map,
-    of: {
-      open: { type: String },
-      close: { type: String },
-      closed: { type: Boolean }
-    }
-  },
-  social: {
-    type: Map,
-    of: { type: String }
-  }
+  hours: { type: Map, of: { open: { type: String }, close: { type: String }, closed: { type: Boolean } } },
+  social: { type: Map, of: { type: String } }
 }, { _id: false });
 
-const PolicySchema = new Schema({
-  // Base
-  cancellation: { type: String },
-  delivery: {
-    minOrder: { type: Number },
-    fee: { type: Number },
-    areas: [{ type: String }]
-  },
-  paymentMethods: [{ type: String }],
-  reservationRules: { type: String },
-
-  // Type-specific (all optional)
-  restaurant: {
-    minOrderValue: { type: Number },
-    deliveryFee: { type: Number },
-    freeDeliveryAbove: { type: Number },
-    deliveryAreas: [{ type: String }],
-    deliveryTime: { type: String },
-    reservationRequired: { type: Boolean },
-    reservationAdvanceHours: { type: Number },
-    partySizeLimit: { type: Number },
-    complimentaryDrink: { type: ComplimentaryOfferSchema },
-    complimentaryAppetizer: { type: ComplimentaryOfferSchema },
-    complimentaryDessert: { type: ComplimentaryOfferSchema },
-    birthdayOffer: { type: ComplimentaryOfferSchema },
-    takeoutAvailable: { type: Boolean },
-    dineInOnly: { type: Boolean },
-    cateringAvailable: { type: Boolean },
-    privateDiningAvailable: { type: Boolean },
-    paymentMethods: [{ type: String }],
-    tipPolicy: { type: String }
-  },
-
-  hotel: {
-    checkInTime: { type: String },
-    checkOutTime: { type: String },
-    lateCheckoutAvailable: { type: Boolean },
-    lateCheckoutFee: { type: Number },
-    earlyCheckInAvailable: { type: Boolean },
-    earlyCheckInFee: { type: Number },
-    maxOccupancy: { type: Number },
-    extraBedAvailable: { type: Boolean },
-    extraBedFee: { type: Number },
-    complimentaryBreakfast: { type: Boolean },
-    complimentaryWiFi: { type: Boolean },
-    complimentaryParking: { type: Boolean },
-    complimentaryGym: { type: Boolean },
-    complimentaryPool: { type: Boolean },
-    roomServiceAvailable: { type: Boolean },
-    laundryAvailable: { type: Boolean },
-    airportTransfer: { type: Boolean },
-    concierge24h: { type: Boolean },
-    securityDeposit: { type: Number },
-    idRequired: { type: Boolean }
-  },
-
-  retail: {
-    acceptsReturns: { type: Boolean },
-    returnWindowDays: { type: Number },
-    returnConditions: { type: String },
-    refundPolicy: { type: String },
-    storeCreditOnly: { type: Boolean },
-    originalPackagingRequired: { type: Boolean },
-    exchangeAvailable: { type: Boolean },
-    sizeExchangeDays: { type: Number },
-    loyaltyPointsEnabled: { type: Boolean },
-    pointsPerRupee: { type: Number },
-    giftWrappingAvailable: { type: Boolean },
-    giftWrappingFee: { type: Number },
-    alterationService: { type: Boolean }
-  },
-
-  spa: {
-    advanceBookingRequired: { type: Boolean },
-    advanceBookingHours: { type: Number },
-    cancellationWindowHours: { type: Number },
-    packagesAvailable: { type: Boolean },
-    membershipAvailable: { type: Boolean },
-    saunaAvailable: { type: Boolean },
-    steamRoomAvailable: { type: Boolean },
-    jacuzziAvailable: { type: Boolean },
-    healthFormRequired: { type: Boolean },
-    ageRestriction: { type: Number }
-  },
-
-  gym: {
-    joiningFee: { type: Number },
-    monthlyFee: { type: Number },
-    yearlyFee: { type: Number },
-    hours24h: { type: Boolean },
-    accessTo: [{ type: String }],
-    personalTrainingAvailable: { type: Boolean },
-    personalTrainingFee: { type: Number },
-    guestPassesIncluded: { type: Number },
-    additionalGuestFee: { type: Number },
-    lockerRental: { type: Boolean },
-    lockerFee: { type: Number }
-  },
-
-  taxi: {
-    baseFare: { type: Number },
-    perKmRate: { type: Number },
-    perMinuteRate: { type: Number },
-    minimumFare: { type: Number },
-    airportTransfer: { type: Boolean },
-    outstationAvailable: { type: Boolean },
-    corporateAccounts: { type: Boolean },
-    vehicleTypes: [{ type: String }],
-    cashEnabled: { type: Boolean },
-    onlinePaymentEnabled: { type: Boolean },
-    corporateBilling: { type: Boolean }
-  },
-
-  customPolicies: [{
-    key: { type: String },
-    value: { type: String },
-    description: { type: String }
-  }]
-}, { _id: false });
+const PolicySchema = new Schema({}, { _id: false, strict: false });
 
 const MerchantKnowledgeSchema = new Schema({
   merchantId: { type: String, required: true, unique: true, index: true },
@@ -559,13 +569,9 @@ const MerchantKnowledgeSchema = new Schema({
   policies: { type: PolicySchema, default: {} },
   faqs: [{ type: FAQSchema }],
   trainingDocs: [{ type: TrainingDocSchema }],
-
-  // Sales strategies
   complimentaryOffers: [{ type: ComplimentaryOfferSchema }],
   discounts: [{ type: DiscountSchema }],
   activePromotions: [{ type: PromotionSchema }],
-
-  // Settings
   settings: {
     aiEnabled: { type: Boolean, default: true },
     autoResponse: { type: Boolean, default: false },
@@ -573,16 +579,10 @@ const MerchantKnowledgeSchema = new Schema({
     salesStrategyEnabled: { type: Boolean, default: false },
     allowDynamicPricing: { type: Boolean, default: false }
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
-// Indexes
 MerchantKnowledgeSchema.index({ 'businessInfo.type': 1 });
 MerchantKnowledgeSchema.index({ 'businessInfo.city': 1 });
-MerchantKnowledgeSchema.index({ 'policies.restaurant.complimentaryDrink.isActive': 1 });
-MerchantKnowledgeSchema.index({ 'policies.hotel.lateCheckoutAvailable': 1 });
-MerchantKnowledgeSchema.index({ 'policies.retail.acceptsReturns': 1 });
 MerchantKnowledgeSchema.index({ 'activePromotions.isActive': 1 });
 MerchantKnowledgeSchema.index({ 'settings.salesStrategyEnabled': 1 });
 
