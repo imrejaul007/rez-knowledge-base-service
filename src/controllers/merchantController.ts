@@ -433,3 +433,301 @@ export const exportData = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, error: 'Export failed' });
   }
 };
+
+// ====== SALES STRATEGY CONTROLLERS ======
+
+// Get sales strategies for a merchant
+export const getSalesStrategies = async (req: Request, res: Response) => {
+  try {
+    const { merchantId } = req.params;
+    
+    const merchant = await MerchantKnowledgeModel.findOne({ merchantId });
+    
+    if (!merchant) {
+      return res.status(404).json({ success: false, error: 'Merchant not found' });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        complimentaryOffers: merchant.complimentaryOffers || [],
+        discounts: merchant.discounts || [],
+        activePromotions: merchant.activePromotions || []
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to fetch sales strategies' });
+  }
+};
+
+// Add/update complimentary offer
+export const addComplimentaryOffer = async (req: Request, res: Response) => {
+  try {
+    const { merchantId } = req.params;
+    const { item, condition, description, isActive } = req.body;
+    
+    const merchant = await MerchantKnowledgeModel.findOne({ merchantId });
+    
+    if (!merchant) {
+      return res.status(404).json({ success: false, error: 'Merchant not found' });
+    }
+    
+    const offer = { item, condition, description, isActive: isActive ?? true };
+    
+    if (!merchant.complimentaryOffers) {
+      merchant.complimentaryOffers = [];
+    }
+    merchant.complimentaryOffers.push(offer as any);
+    
+    await merchant.save();
+    
+    res.json({ success: true, data: merchant.complimentaryOffers });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to add complimentary offer' });
+  }
+};
+
+// Add/update discount
+export const addDiscount = async (req: Request, res: Response) => {
+  try {
+    const { merchantId } = req.params;
+    const discountData = req.body;
+    
+    const merchant = await MerchantKnowledgeModel.findOne({ merchantId });
+    
+    if (!merchant) {
+      return res.status(404).json({ success: false, error: 'Merchant not found' });
+    }
+    
+    if (!merchant.discounts) {
+      merchant.discounts = [];
+    }
+    merchant.discounts.push(discountData as any);
+    
+    await merchant.save();
+    
+    res.json({ success: true, data: merchant.discounts });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to add discount' });
+  }
+};
+
+// Add promotion
+export const addPromotion = async (req: Request, res: Response) => {
+  try {
+    const { merchantId } = req.params;
+    const promotionData = req.body;
+    promotionData.id = uuidv4();
+    
+    const merchant = await MerchantKnowledgeModel.findOne({ merchantId });
+    
+    if (!merchant) {
+      return res.status(404).json({ success: false, error: 'Merchant not found' });
+    }
+    
+    if (!merchant.activePromotions) {
+      merchant.activePromotions = [];
+    }
+    merchant.activePromotions.push(promotionData as any);
+    
+    await merchant.save();
+    
+    res.json({ success: true, data: merchant.activePromotions });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to add promotion' });
+  }
+};
+
+// ====== POLICY CONTROLLERS ======
+
+// Get policies for a merchant
+export const getPolicies = async (req: Request, res: Response) => {
+  try {
+    const { merchantId } = req.params;
+    
+    const merchant = await MerchantKnowledgeModel.findOne({ merchantId }).select('policies businessInfo.type');
+    
+    if (!merchant) {
+      return res.status(404).json({ success: false, error: 'Merchant not found' });
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        merchantType: merchant.businessInfo.type,
+        policies: merchant.policies
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to fetch policies' });
+  }
+};
+
+// Update policies
+export const updatePolicies = async (req: Request, res: Response) => {
+  try {
+    const { merchantId } = req.params;
+    const policiesData = req.body;
+    
+    const merchant = await MerchantKnowledgeModel.findOneAndUpdate(
+      { merchantId },
+      { $set: { policies: policiesData } },
+      { new: true }
+    );
+    
+    if (!merchant) {
+      return res.status(404).json({ success: false, error: 'Merchant not found' });
+    }
+    
+    res.json({ success: true, data: merchant.policies });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to update policies' });
+  }
+};
+
+// Update merchant-type specific policies
+export const updateMerchantPolicies = async (req: Request, res: Response) => {
+  try {
+    const { merchantId } = req.params;
+    const { policyType, policies } = req.body;
+    // policyType: 'restaurant', 'hotel', 'retail', etc.
+    
+    const merchant = await MerchantKnowledgeModel.findOne({ merchantId });
+    
+    if (!merchant) {
+      return res.status(404).json({ success: false, error: 'Merchant not found' });
+    }
+    
+    // Update the specific policy type
+    (merchant.policies as any)[policyType] = {
+      ...((merchant.policies as any)[policyType] || {}),
+      ...policies
+    };
+    
+    await merchant.save();
+    
+    res.json({ 
+      success: true, 
+      data: (merchant.policies as any)[policyType] 
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to update merchant policies' });
+  }
+};
+
+// Get policies by merchant type (for comparison/benchmarking)
+export const getPoliciesByType = async (req: Request, res: Response) => {
+  try {
+    const { type } = req.query; // restaurant, hotel, retail, etc.
+    
+    if (!type) {
+      return res.status(400).json({ success: false, error: 'Merchant type required' });
+    }
+    
+    const merchants = await MerchantKnowledgeModel
+      .find({ 'businessInfo.type': type })
+      .select('merchantId businessInfo.name policies complimentaryOffers discounts')
+      .limit(50);
+    
+    res.json({
+      success: true,
+      data: merchants,
+      count: merchants.length
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to fetch policies by type' });
+  }
+};
+
+// ====== AI SALES RECOMMENDATIONS ======
+
+// Get AI sales recommendations based on merchant policies
+export const getSalesRecommendations = async (req: Request, res: Response) => {
+  try {
+    const { merchantId } = req.params;
+    const { context } = req.query; // 'ordering', 'checkout', 'customer_query'
+    
+    const merchant = await MerchantKnowledgeModel.findOne({ merchantId });
+    
+    if (!merchant) {
+      return res.status(404).json({ success: false, error: 'Merchant not found' });
+    }
+    
+    const recommendations: any[] = [];
+    const merchantType = merchant.businessInfo.type;
+    
+    // Restaurant recommendations
+    if (merchantType === 'restaurant') {
+      const restaurant = merchant.policies.restaurant;
+      if (restaurant?.complimentaryDrink?.isActive) {
+        recommendations.push({
+          type: 'complimentary',
+          item: restaurant.complimentaryDrink.item,
+          message: `Offer complimentary ${restaurant.complimentaryDrink.item}!`,
+          condition: restaurant.complimentaryDrink.condition
+        });
+      }
+      if (merchantType === 'restaurant' && merchant.discounts?.length) {
+        merchant.discounts.filter(d => d.isActive).forEach(disc => {
+          recommendations.push({
+            type: 'discount',
+            name: disc.name,
+            value: disc.type === 'percentage' ? `${disc.value}% off` : `₹${disc.value} off`,
+            message: disc.description
+          });
+        });
+      }
+    }
+    
+    // Hotel recommendations
+    if (merchantType === 'hotel') {
+      const hotel = merchant.policies.hotel;
+      if (hotel?.complimentaryBreakfast) {
+        recommendations.push({
+          type: 'amenity',
+          item: 'Complimentary Breakfast',
+          message: 'Highlight complimentary breakfast for bookings'
+        });
+      }
+      if (hotel?.lateCheckoutAvailable) {
+        recommendations.push({
+          type: 'upsell',
+          item: 'Late Checkout',
+          fee: hotel.lateCheckoutFee,
+          message: hotel.lateCheckoutFee ? `Late checkout available for ₹${hotel.lateCheckoutFee}` : 'Free late checkout available'
+        });
+      }
+    }
+    
+    // Retail recommendations
+    if (merchantType === 'retail') {
+      const retail = merchant.policies.retail;
+      if (retail?.loyaltyPointsEnabled) {
+        recommendations.push({
+          type: 'loyalty',
+          points: retail.pointsPerRupee,
+          message: `Earn ${retail.pointsPerRupee} points per ₹1 spent`
+        });
+      }
+      if (retail?.acceptsReturns) {
+        recommendations.push({
+          type: 'policy',
+          message: `Easy returns within ${retail.returnWindowDays || 7} days`
+        });
+      }
+    }
+    
+    res.json({
+      success: true,
+      data: {
+        merchantId,
+        merchantType,
+        recommendations,
+        activePromotions: merchant.activePromotions?.filter(p => p.isActive) || [],
+        complimentaryOffers: merchant.complimentaryOffers?.filter(o => o.isActive) || []
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to generate recommendations' });
+  }
+};
