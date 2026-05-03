@@ -6,8 +6,26 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 
 import merchantRoutes from './routes/merchant';
+import qrContextRoutes from './routes/qr-context';
+import {
+  UnifiedKnowledgeRouter,
+  getAllKnowledgeBases,
+  routeToKnowledgeBase,
+  detectQueryContext,
+  createContextFromQR,
+  matchQueryIntent,
+  searchKBItems,
+  getQuestionResponse,
+  hotelRoomKB,
+  restaurantMenuKB,
+  storeMerchantKB,
+  campaignAdsKB
+} from './kb';
 
 dotenv.config();
+
+// Initialize the unified knowledge router
+const knowledgeRouter = UnifiedKnowledgeRouter.getInstance();
 
 const app = express();
 const PORT = process.env.PORT || 4005;
@@ -30,12 +48,20 @@ app.get('/health', (req, res) => {
 
 // Routes
 app.use('/api/merchants', merchantRoutes);
+app.use('/api/qr-context', qrContextRoutes);
 
 // API Documentation
 app.get('/api', (req, res) => {
   res.json({
     name: 'REZ Knowledge Base Service',
-    version: '1.0.0',
+    version: '2.0.0',
+    description: 'Comprehensive knowledge base service with QR context routing',
+    knowledgeBases: {
+      hotelRoom: 'Hotel/Room Service KB',
+      restaurantMenu: 'Restaurant Menu KB',
+      storeMerchant: 'Store/Merchant KB',
+      campaignAds: 'Campaign/Ads KB'
+    },
     endpoints: {
       health: 'GET /health',
       merchants: {
@@ -58,9 +84,131 @@ app.get('/api', (req, res) => {
       },
       search: 'GET /api/merchants/:merchantId/search?q=query',
       import: 'POST /api/merchants/:merchantId/import',
-      export: 'GET /api/merchants/:merchantId/export'
+      export: 'GET /api/merchants/:merchantId/export',
+      qrContext: {
+        list: 'GET /api/qr-context/knowledge-bases',
+        detect: 'POST /api/qr-context/detect',
+        search: 'POST /api/qr-context/search',
+        query: 'POST /api/qr-context/query',
+        hotelRoom: 'GET /api/qr-context/hotel-room',
+        restaurantMenu: 'GET /api/qr-context/restaurant-menu',
+        storeMerchant: 'GET /api/qr-context/store-merchant',
+        campaignAds: 'GET /api/qr-context/campaign-ads'
+      },
+      salesStrategies: {
+        list: 'GET /api/merchants/:merchantId/sales-strategies',
+        recommendations: 'GET /api/merchants/:merchantId/sales-recommendations'
+      },
+      policies: {
+        get: 'GET /api/merchants/:merchantId/policies',
+        update: 'PUT /api/merchants/:merchantId/policies',
+        byType: 'GET /api/merchants/policies/by-type'
+      }
     }
   });
+});
+
+// QR Context specific endpoints (direct knowledge base access)
+app.get('/api/qr-context/knowledge-bases', (req, res) => {
+  const bases = getAllKnowledgeBases();
+  res.json({
+    success: true,
+    data: bases
+  });
+});
+
+app.post('/api/qr-context/detect', (req, res) => {
+  try {
+    const { query, qrData } = req.body;
+
+    let context;
+    if (qrData) {
+      context = createContextFromQR(qrData);
+    } else if (query) {
+      const source = detectQueryContext(query);
+      context = {
+        source,
+        timestamp: new Date()
+      };
+    } else {
+      return res.status(400).json({ success: false, error: 'Query or QR data required' });
+    }
+
+    const kb = routeToKnowledgeBase(query || '', context);
+
+    res.json({
+      success: true,
+      data: {
+        detectedSource: context.source,
+        context,
+        knowledgeBaseName: knowledgeRouter.getKnowledgeBaseInfo(context.source)?.name
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Detection failed' });
+  }
+});
+
+app.post('/api/qr-context/search', (req, res) => {
+  try {
+    const { query, context } = req.body;
+
+    if (!query) {
+      return res.status(400).json({ success: false, error: 'Query required' });
+    }
+
+    const qrContext = context
+      ? createContextFromQR(context)
+      : { source: detectQueryContext(query), timestamp: new Date() };
+
+    const results = searchKBItems(query, qrContext);
+    const intent = matchQueryIntent(query, qrContext);
+
+    res.json({
+      success: true,
+      data: {
+        query,
+        context: qrContext,
+        intent,
+        results,
+        count: results.length
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Search failed' });
+  }
+});
+
+app.post('/api/qr-context/query', (req, res) => {
+  try {
+    const { query, context } = req.body;
+
+    if (!query) {
+      return res.status(400).json({ success: false, error: 'Query required' });
+    }
+
+    const qrContext = context
+      ? createContextFromQR(context)
+      : { source: detectQueryContext(query), timestamp: new Date() };
+
+    const response = getQuestionResponse(query, qrContext);
+    const intent = matchQueryIntent(query, qrContext);
+    const items = searchKBItems(query, qrContext);
+
+    res.json({
+      success: true,
+      data: {
+        query,
+        context: qrContext,
+        intent,
+        response: response || 'I am not sure I understand. Could you please rephrase your question?',
+        relatedItems: items.slice(0, 5),
+        requiresHuman: !response && items.length === 0
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Query processing failed' });
+  }
 });
 
 // Error handling
