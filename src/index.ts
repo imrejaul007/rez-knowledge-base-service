@@ -28,7 +28,7 @@ dotenv.config();
 const knowledgeRouter = UnifiedKnowledgeRouter.getInstance();
 
 const app = express();
-const PORT = process.env.PORT || 4005;
+const PORT = process.env.PORT || 4025;
 
 // Middleware
 app.use(helmet());

@@ -14,6 +14,6 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 4005
+        value: 4025
       - key: MONGODB_URI
         sync: false
